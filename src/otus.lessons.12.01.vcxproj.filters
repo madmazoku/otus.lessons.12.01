@@ -21,7 +21,7 @@
     <ClInclude Include="targetver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="sparce_matrix.h">
+    <ClInclude Include="sparse_matrix.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
