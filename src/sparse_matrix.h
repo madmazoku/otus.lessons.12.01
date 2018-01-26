@@ -5,14 +5,25 @@
 
 namespace sm_helpers
 {
-template <size_t... Is>
-static auto loc_type_helper(std::index_sequence<Is...>)
-{
-    return std::make_tuple(Is...);
-}
+
+template<size_t dim, typename... Is>
+struct indexer {
+    static auto index(Is... I)
+    {
+        return indexer<dim - 1, size_t, Is...>::index(dim - 1, I...);
+    }
+};
+
+template<typename... Is>
+struct indexer<0, Is...> {
+    static auto index(Is... I)
+    {
+        return std::make_tuple(I...);
+    }
+};
 
 template<size_t dim>
-using loc_type = decltype(loc_type_helper(std::make_index_sequence<dim> {}));
+using loc_type = decltype(indexer<dim>::index());
 
 template<size_t dim, typename T>
 using map_type = std::map< sm_helpers::loc_type<dim>, T >;
