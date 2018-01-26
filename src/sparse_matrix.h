@@ -2,18 +2,6 @@
 
 #include <map>
 
-#include <boost/type_index.hpp>
-#include <type_traits>
-#include <sstream>
-
-template<class T>
-std::string pretty_type_name()
-{
-    std::stringstream ss;
-    ss << '[' << sizeof(T) << "] " << boost::typeindex::type_id_with_cvr<T>().pretty_name();
-    return ss.str();
-}
-
 namespace sm_helpers
 {
 template <size_t... Is>
