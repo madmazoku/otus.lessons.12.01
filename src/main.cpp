@@ -5,7 +5,12 @@
 #include <boost/program_options.hpp>
 #include <iostream>
 
+#ifdef __unix__
 #include "../bin/version.h"
+#else
+#include "in.version.h"
+#endif
+
 #include "sparse_matrix.h"
 
 void do_matrix();
