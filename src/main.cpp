@@ -4,7 +4,7 @@
 #include "stdafx.h"
 #include <iostream>
 
-#include "sparce_matrix.h"
+#include "sparse_matrix.h"
 
 int main(int argc, char** argv)
 {
