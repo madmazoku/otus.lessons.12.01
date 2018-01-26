@@ -2,41 +2,67 @@
 //
 
 #include "stdafx.h"
+#include <boost/program_options.hpp>
 #include <iostream>
 
+#include "../bin/version.h"
 #include "sparse_matrix.h"
+
+void do_matrix();
 
 int main(int argc, char** argv)
 {
-    auto a = std::make_tuple(1, 2, 3);
-    auto b = std::tuple_cat(a, std::make_tuple(4));
+    boost::program_options::options_description desc("Allowed options");
+    desc.add_options()
+    ("help,h", "print usage message")
+    ("version,v", "print version number");
 
-    std::cout << std::tuple_size<decltype(b)>() << std::endl;
+    boost::program_options::variables_map vm;
+    boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
+    boost::program_options::notify(vm);
 
-    sparce_matrix<3, int, -1> sm;
+    if (vm.count("help")) {
+        std::cout << desc << std::endl;
+    } else if (vm.count("version")) {
+        std::cout << "Build version: " << build_version() << std::endl;
+        std::cout << "Boost version: " << (BOOST_VERSION / 100000) << '.' << (BOOST_VERSION / 100 % 1000) << '.' << (BOOST_VERSION % 100) << std::endl;
+    } else {
 
-    sm._matrix[std::make_tuple(2, 3, 1)] = 1;
-    sm._matrix[std::make_tuple(3, 1, 2)] = 2;
-    sm._matrix[std::make_tuple(1, 2, 3)] = 3;
+        do_matrix();
 
-    sm[5][6][4] = (sm[6][4][5] = sm[4][5][6] = 7) + 1;
-
-    std::cout << "[4][5][6]: " << sm[4][5][6] << std::endl;
-    std::cout << "[7][8][9]: " << sm[7][8][9] << std::endl;
-
-    std::cout << "size: " << sm.size() << std::endl;
-    sm[2][3][1] = -1;
-    sm[3][1][2] = -1;
-    std::cout << "size: " << sm.size() << std::endl;
-
-    for (auto e : sm) {
-        int x, y, z, t;
-        std::tie(x, y, z) = e.first;
-        t = e.second;
-        std::cout << "x: " << x << "; y: " << y << "; z: " << z << "; t: " << t << std::endl;
     }
 
+#ifndef __unix__
     getchar();
+#endif
+
     return 0;
 }
 
+void do_matrix()
+{
+    sparse_matrix<2,int, 0> sm;
+    for(size_t n = 0; n <= 9; ++n) {
+        sm[n][n] = n;
+        sm[n][9-n] = 9-n;
+    }
+
+    for(size_t y = 1; y <= 8; ++y) {
+        for(size_t x = 1; x <= 8; ++x) {
+            if(x != 1)
+                std::cout << ' ';
+            std::cout << sm[x][y];
+        }
+        std::cout << std::endl;
+    }
+    std::cout << std::endl;
+
+    std::cout << "matrix size: " << sm.size() << std::endl;
+    std::cout << std::endl;
+
+    for(auto e : sm) {
+        size_t x, y;
+        std::tie(x, y) = e.first;
+        std::cout << "matrix[" << x << ", " << y << "] = " << e.second << std::endl;
+    }
+}

@@ -1,74 +1,100 @@
 #pragma once
 
 #include <map>
-#include <vector>
+
+#include <boost/type_index.hpp>
+#include <type_traits>
+#include <sstream>
+
+template<class T>
+std::string pretty_type_name()
+{
+    std::stringstream ss;
+    ss << '[' << sizeof(T) << "] " << boost::typeindex::type_id_with_cvr<T>().pretty_name();
+    return ss.str();
+}
+
+namespace sm_helpers
+{
+template <size_t... Is>
+static auto loc_type_helper(std::index_sequence<Is...>)
+{
+    return std::make_tuple(Is...);
+}
+
+template<size_t dim>
+using loc_type = decltype(loc_type_helper(std::make_index_sequence<dim> {}));
+
+template<size_t dim, typename T>
+using map_type = std::map< sm_helpers::loc_type<dim>, T >;
+
+template<size_t u_dim, size_t dim, typename T, T def_val>
+struct loc_value {
+public:
+    using map_type = sm_helpers::map_type<dim, T>;
+    using loc_type = sm_helpers::loc_type<dim - u_dim>;
+    using next_loc_value = loc_value<u_dim - 1, dim, T, def_val>;
+    map_type& _matrix;
+    loc_type _loc;
+
+    loc_value(map_type& matrix, loc_type loc) : _matrix(matrix), _loc(loc) {}
+
+    next_loc_value operator[](size_t n)
+    {
+        return next_loc_value{_matrix, std::tuple_cat(_loc, std::make_tuple(n))};
+    }
+};
 
 template<size_t dim, typename T, T def_val>
-class sparce_matrix {
+struct loc_value<0, dim, T, def_val> {
 public:
-    template <size_t... Is>
-    static auto loc_type_helper(std::index_sequence<Is...>) { return std::make_tuple(Is...); }
+    using map_type = sm_helpers::map_type<dim, T>;
+    using loc_type = sm_helpers::loc_type<dim>;
+    using last_loc_value = loc_value<0, dim, T, def_val>;
+    map_type& _matrix;
+    loc_type _loc;
 
-    using loc_type = decltype(loc_type_helper(std::make_index_sequence<dim>{}));
-    using map_type = std::map<loc_type, T>;
-    map_type _matrix;
+    loc_value(map_type& matrix, loc_type loc) : _matrix(matrix), _loc(loc) {}
 
-    template<size_t u_dim>
-    struct loc_value{
-    public:
-        using loc_type = decltype(loc_type_helper(std::make_index_sequence<dim - u_dim>{}));
-        map_type& _matrix;
-        loc_type _loc;
-
-        loc_value(map_type& matrix, loc_type loc) : _matrix(matrix), _loc(loc) {}
-
-        loc_value<u_dim - 1> operator[](size_t n) {
-            return loc_value<u_dim - 1>{_matrix, std::tuple_cat(_loc, std::make_tuple(n))};
-        }
-    };
-
-    template<>
-    struct loc_value<0> {
-    public:
-        using loc_type = decltype(loc_type_helper(std::make_index_sequence<dim>{}));
-        map_type& _matrix;
-        loc_type _loc;
-
-        loc_value(map_type& matrix, loc_type loc) : _matrix(matrix), _loc(loc) {}
-
-        loc_value<0>& operator=(const T& t) {
-            auto f = _matrix.find(_loc);
-            if (t != def_val)
-                _matrix.insert_or_assign(_loc, t);
-            else if (f != _matrix.end())
-                _matrix.erase(f);
-            return *this;
-        }
-
-        loc_value<0>& operator=(const loc_value<0>& lv) {
-            T t = lv;
-            auto f = _matrix.find(_loc);
-            if (t != def_val)
-                _matrix.insert_or_assign(_loc, t);
-            else if (f != _matrix.end())
-                _matrix.erase(f);
-            return *this;
-        }
-        
-        operator T() const {
-            auto f = _matrix.find(_loc);
-            if (f == _matrix.end())
-                return def_val;
+    last_loc_value& operator=(const T& t)
+    {
+        auto f = _matrix.find(_loc);
+        if (t != def_val)
+            if(f == _matrix.end())
+                _matrix.emplace(std::make_pair(_loc, t));
             else
-                return f->second;
-        }
-    };
-
-    loc_value<dim - 1> operator[](size_t n) {
-        return loc_value<dim - 1>(_matrix, std::make_tuple(n));
+                f->second = t;
+        else if (f != _matrix.end())
+            _matrix.erase(f);
+        return *this;
     }
 
-    auto begin() { return _matrix.begin(); }
-    auto end() { return _matrix.end(); }
-    size_t size() { return _matrix.size(); }
+    operator T() const
+    {
+        auto f = _matrix.find(_loc);
+        if (f == _matrix.end())
+            return def_val;
+        else
+            return f->second;
+    }
+};
+
+}
+
+template<size_t dim, typename T, T def_val>
+class sparse_matrix : public sm_helpers::map_type<dim, T>
+{
+public:
+    using loc_type = sm_helpers::loc_type<dim>;
+    using next_loc_value = sm_helpers::loc_value<dim - 1, dim, T, def_val>;
+    using last_loc_value = sm_helpers::loc_value<0, dim, T, def_val>;
+
+    next_loc_value operator[](size_t n)
+    {
+        return next_loc_value(*this, std::make_tuple(n));
+    }
+    last_loc_value operator[](loc_type loc)
+    {
+        return last_loc_value(*this, loc);
+    }
 };

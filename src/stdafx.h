@@ -5,10 +5,14 @@
 
 #pragma once
 
+#ifndef __unix__
+
 #include "targetver.h"
+#include <tchar.h>
+
+#endif
 
 #include <stdio.h>
-#include <tchar.h>
 
 
 
