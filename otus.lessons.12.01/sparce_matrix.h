@@ -45,6 +45,16 @@ public:
             return *this;
         }
 
+        loc_value<0>& operator=(const loc_value<0>& lv) {
+            T t = lv;
+            auto f = _matrix.find(_loc);
+            if (t != def_val)
+                _matrix.insert_or_assign(_loc, t);
+            else if (f != _matrix.end())
+                _matrix.erase(f);
+            return *this;
+        }
+        
         operator T() const {
             auto f = _matrix.find(_loc);
             if (f == _matrix.end())
@@ -58,4 +68,7 @@ public:
         return loc_value<dim - 1>(_matrix, std::make_tuple(n));
     }
 
+    auto begin() { return _matrix.begin(); }
+    auto end() { return _matrix.end(); }
+    size_t size() { return _matrix.size(); }
 };
